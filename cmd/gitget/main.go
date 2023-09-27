@@ -1,45 +1,36 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 
 	"github.com/AaronCQL/gitget/pkg/gitget"
+	"github.com/spf13/pflag"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Printf("Usage: gitget REPO_URL\n")
+	pflag.Usage = func() {
+		fmt.Printf("Usage: gitget REPO_URL [OPTIONS...]\n")
+		pflag.PrintDefaults()
+	}
+
+	cfg := gitget.Config{}
+	pflag.StringVarP(&cfg.Dir, "dir", "d", "", "The target directory to clone into")
+	pflag.StringVarP(&cfg.Branch, "branch", "b", "", "Git branch to clone")
+	pflag.StringVarP(&cfg.Commit, "commit", "c", "", "Git commit hash to clone")
+	pflag.StringVarP(&cfg.Tag, "tag", "t", "", "Git tag to clone")
+	pflag.BoolVarP(&cfg.Force, "force", "f", false, "Forcefully write files into the existing target directory")
+	pflag.BoolP("help", "h", false, "Display this help message")
+
+	pflag.Parse()
+
+	args := pflag.Args()
+	if len(args) != 1 {
+		pflag.Usage()
 		os.Exit(1)
 	}
 
-	var (
-		repoUrl   string = os.Args[1]
-		targetDir string
-		force     bool
-		branch    string
-		commit    string
-		tag       string
-	)
-	flag.StringVar(&targetDir, "dir", "", "The target directory to clone into")
-	flag.BoolVar(&force, "force", false, "If the target directory already exists, forcefully write files into it")
-	flag.StringVar(&branch, "branch", "", "Git branch to clone")
-	flag.StringVar(&commit, "commit", "", "Git commit hash to clone")
-	flag.StringVar(&tag, "tag", "", "Git tag to clone")
-
-	if err := flag.CommandLine.Parse(os.Args[2:]); err != nil {
-		fmt.Printf("Error: %s\n", err)
-		os.Exit(1)
-	}
-
-	res, err := gitget.Clone(repoUrl,
-		gitget.WithTargetDir(targetDir),
-		gitget.WithForce(force),
-		gitget.WithBranch(branch),
-		gitget.WithCommit(commit),
-		gitget.WithTag(tag),
-	)
+	res, err := gitget.Clone(args[0], cfg)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
 		os.Exit(1)

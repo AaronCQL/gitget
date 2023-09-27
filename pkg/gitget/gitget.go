@@ -19,45 +19,45 @@ type Result struct {
 	RepoFragment string
 }
 
-func Clone(repository string, options ...optionFn) (Result, error) {
-	// Parse repo
+func Clone(repository string, config Config) (Result, error) {
+	// Parse repo string
 	repo, err := parse(repository)
 	if err != nil {
 		return Result{}, err
 	}
 
-	// Init all opts
-	opts := newOptions(options...)
+	// Init all options
 	workDir, err := os.Getwd()
 	if err != nil {
 		return Result{}, err
 	}
 	targetDir := ""
-	if opts.targetDir == "" {
+	if config.Dir == "" {
 		targetDir = filepath.Join(workDir, repo.name)
-	} else if filepath.IsAbs(opts.targetDir) {
-		targetDir = opts.targetDir
+	} else if filepath.IsAbs(config.Dir) {
+		targetDir = config.Dir
 	} else {
-		targetDir = filepath.Join(workDir, opts.targetDir)
+		targetDir = filepath.Join(workDir, config.Dir)
 	}
 
 	// Check target dir
-	if _, err := os.Stat(targetDir); err == nil && !opts.force {
+	if _, err := os.Stat(targetDir); err == nil && !config.Force {
 		return Result{}, os.ErrExist
 	}
 
 	// Download tarball
+	// Use the github api by default as it will fallback to the default branch
 	url := fmt.Sprintf("https://api.github.com/repos/%v/%v/tarball", repo.owner, repo.name)
 	fragment := "HEAD"
-	if opts.commit != "" {
-		url = fmt.Sprintf("https://github.com/%v/%v/archive/%v.tar.gz", repo.owner, repo.name, opts.commit)
-		fragment = opts.commit
-	} else if opts.tag != "" {
-		url = fmt.Sprintf("https://github.com/%v/%v/archive/refs/tags/%v.tar.gz", repo.owner, repo.name, opts.tag)
-		fragment = opts.tag
-	} else if opts.branch != "" {
-		url = fmt.Sprintf("https://github.com/%v/%v/archive/refs/heads/%v.tar.gz", repo.owner, repo.name, opts.branch)
-		fragment = opts.branch
+	if config.Commit != "" {
+		url = fmt.Sprintf("https://github.com/%v/%v/archive/%v.tar.gz", repo.owner, repo.name, config.Commit)
+		fragment = config.Commit
+	} else if config.Tag != "" {
+		url = fmt.Sprintf("https://github.com/%v/%v/archive/refs/tags/%v.tar.gz", repo.owner, repo.name, config.Tag)
+		fragment = config.Tag
+	} else if config.Branch != "" {
+		url = fmt.Sprintf("https://github.com/%v/%v/archive/refs/heads/%v.tar.gz", repo.owner, repo.name, config.Branch)
+		fragment = config.Branch
 	}
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -89,13 +89,13 @@ func Clone(repository string, options ...optionFn) (Result, error) {
 		}
 		switch header.Typeflag {
 		case tar.TypeDir:
-			baseDir := strings.SplitN(header.Name, string(os.PathSeparator), 2)[1]
-			if err := os.MkdirAll(filepath.Join(targetDir, baseDir), 0755); err != nil {
+			targetPath := strings.SplitN(header.Name, string(os.PathSeparator), 2)[1]
+			if err := os.MkdirAll(filepath.Join(targetDir, targetPath), 0755); err != nil {
 				return Result{}, err
 			}
 		case tar.TypeReg:
-			baseDir := strings.SplitN(header.Name, string(os.PathSeparator), 2)[1]
-			outFile, err := os.Create(filepath.Join(targetDir, baseDir))
+			targetPath := strings.SplitN(header.Name, string(os.PathSeparator), 2)[1]
+			outFile, err := os.Create(filepath.Join(targetDir, targetPath))
 			if err != nil {
 				return Result{}, err
 			}
