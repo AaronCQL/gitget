@@ -25,9 +25,14 @@ func main() {
 	pflag.StringVarP(&cfg.Commit, "commit", "c", "", "Git commit hash to clone")
 	pflag.StringVarP(&cfg.Tag, "tag", "t", "", "Git tag to clone")
 	pflag.BoolVarP(&cfg.Force, "force", "f", false, "Forcefully write files into the existing target directory")
-	pflag.BoolP("help", "h", false, "Display this help message")
+	help := pflag.BoolP("help", "h", false, "Display this help message")
 
 	pflag.Parse()
+
+	if *help {
+		pflag.Usage()
+		os.Exit(0)
+	}
 
 	args := pflag.Args()
 	if len(args) != 1 {
