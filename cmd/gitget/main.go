@@ -8,6 +8,11 @@ import (
 	"github.com/spf13/pflag"
 )
 
+const (
+	success  string = "\033[32m✓"
+	critical string = "\033[31m✕"
+)
+
 func main() {
 	pflag.Usage = func() {
 		fmt.Printf("Usage: gitget REPO_URL [OPTIONS...]\n")
@@ -32,9 +37,12 @@ func main() {
 
 	res, err := gitget.Clone(args[0], cfg)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
+		fmt.Printf("%v %v\n", critical, err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Cloned %v/%v (%v) into %v\n", res.RepoOwner, res.RepoName, res.RepoFragment, res.TargetDirRel)
+	fmt.Printf(
+		"%v cloned %v/%v (%v) into %v\n",
+		success, res.RepoOwner, res.RepoName, res.RepoFragment, res.TargetDirRel,
+	)
 }

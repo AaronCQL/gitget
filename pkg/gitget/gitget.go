@@ -76,7 +76,7 @@ func Clone(repository string, config Config) (Result, error) {
 
 	// Check target dir
 	if _, err := os.Stat(targetDir); err == nil && !config.Force {
-		return Result{}, os.ErrExist
+		return Result{}, fmt.Errorf("target directory already exists: %v", targetDir)
 	}
 
 	// Form the archive URL
