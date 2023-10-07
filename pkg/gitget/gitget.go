@@ -11,14 +11,45 @@ import (
 	"strings"
 )
 
+// The configuration for the `Clone` function.
+type Config struct {
+	// The target directory to clone into. If empty, the repository name is used.
+	Dir string
+	// The Git branch to clone.
+	Branch string
+	// The Git tag to clone.
+	Tag string
+	// The Git commit hash to clone.
+	Commit string
+	// Forcefully write files into the existing target directory.
+	Force bool
+}
+
+// The result of the `Clone` function.
 type Result struct {
+	// The relative path to the target directory.
 	TargetDirRel string
+	// The absolute path to the target directory.
 	TargetDirAbs string
-	RepoOwner    string
-	RepoName     string
+	// The owner of the repository, typically the user or organisation.
+	RepoOwner string
+	// The name of the repository.
+	RepoName string
+	// The commit, tag, or branch used to clone the repository.
 	RepoFragment string
 }
 
+// Clones the given repository using the configuration provided. The default behaviour
+// clones the HEAD of the default branch.
+//
+//	res, err := gitget.Clone("github.com/AaronCQL/gitget", gitget.Config{})
+//	if err != nil {
+//		panic(err)
+//	}
+//	fmt.Printf(
+//		"Cloned %v/%v (%v) into %v\n",
+//		res.RepoOwner, res.RepoName, res.RepoFragment, res.TargetDirRel,
+//	)
 func Clone(repository string, config Config) (Result, error) {
 	// Parse repo string
 	repo, err := parse(repository)
@@ -33,10 +64,13 @@ func Clone(repository string, config Config) (Result, error) {
 	}
 	targetDir := ""
 	if config.Dir == "" {
+		// Use current working dir and repo name as default dir name
 		targetDir = filepath.Join(workDir, repo.name)
 	} else if filepath.IsAbs(config.Dir) {
+		// If the given dir is absolute, use it as is
 		targetDir = config.Dir
 	} else {
+		// If the given dir is relative, use it as relative to the working dir
 		targetDir = filepath.Join(workDir, config.Dir)
 	}
 
@@ -45,8 +79,8 @@ func Clone(repository string, config Config) (Result, error) {
 		return Result{}, os.ErrExist
 	}
 
-	// Download tarball
-	// Use the github api by default as it will fallback to the default branch
+	// Form the archive URL
+	// Use the github api by default as it uses the default branch
 	url := fmt.Sprintf("https://api.github.com/repos/%v/%v/tarball", repo.owner, repo.name)
 	fragment := "HEAD"
 	if config.Commit != "" {
@@ -59,6 +93,8 @@ func Clone(repository string, config Config) (Result, error) {
 		url = fmt.Sprintf("https://github.com/%v/%v/archive/refs/heads/%v.tar.gz", repo.owner, repo.name, config.Branch)
 		fragment = config.Branch
 	}
+
+	// Download the tarball
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return Result{}, err
